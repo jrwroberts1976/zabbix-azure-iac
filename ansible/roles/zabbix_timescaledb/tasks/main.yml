@@ -2,10 +2,12 @@
 - name: Verify Zabbix TimescaleDB role platform
   ansible.builtin.assert:
     that:
-      - ansible_distribution == 'Debian'
-      - ansible_distribution_major_version | int >= 13
+      - >-
+        (ansible_distribution == 'Debian' and (ansible_distribution_major_version | int) == 13)
+        or
+        (ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04')
       - zabbix_timescaledb_database | length > 0
-    fail_msg: "The Zabbix TimescaleDB role targets Debian 13+ and requires a database name."
+    fail_msg: "The Zabbix TimescaleDB role supports Debian 13 or Ubuntu 24.04 LTS and requires a database name."
 
 - name: Check Zabbix TimescaleDB schema script
   ansible.builtin.stat:
