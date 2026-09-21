@@ -22,7 +22,9 @@ enable_public_ip = true
 vnet_address_space       = ["10.42.0.0/16"]
 subnet_address_prefixes  = ["10.42.1.0/24"]
 
-vm_size                      = "Standard_B2s"
+# Supported values: "debian-13" or "ubuntu-24.04"
+os_type                       = "debian-13"
+vm_size                       = "Standard_B2s"
 os_disk_size_gb              = 64
 os_disk_storage_account_type = "StandardSSD_LRS"
 
