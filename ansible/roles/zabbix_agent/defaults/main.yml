@@ -1,6 +1,9 @@
 ---
 zabbix_version: "7.0"
-zabbix_repository_family: "{{ 'debian-arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'debian' }}"
+zabbix_repository_distribution: "{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}"
+zabbix_repository_family: "{{ zabbix_repository_distribution ~ ('-arm64' if ansible_architecture in ['aarch64', 'arm64'] else '') }}"
+zabbix_repository_package_url: "{{ 'https://repo.zabbix.com/zabbix/' ~ zabbix_version ~ '/' ~ zabbix_repository_family ~ '/pool/main/z/zabbix-release/zabbix-release_latest+ubuntu' ~ ansible_distribution_version ~ '_all.deb' if ansible_distribution == 'Ubuntu' else 'https://repo.zabbix.com/zabbix/' ~ zabbix_version ~ '/' ~ zabbix_repository_family ~ '/pool/main/z/zabbix-release/zabbix-release_latest_' ~ zabbix_version ~ '+debian' ~ ansible_distribution_major_version ~ '_all.deb' }}"
+zabbix_repository_package_path: "/tmp/zabbix-release-{{ zabbix_version }}-{{ ansible_distribution | lower }}{{ ansible_distribution_version }}.deb"
 zabbix_agent_package: zabbix-agent2
 zabbix_agent_service_name: zabbix-agent2
 zabbix_agent_port: 10050
