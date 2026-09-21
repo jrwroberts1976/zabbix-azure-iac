@@ -2,22 +2,24 @@
 - name: Verify Zabbix server role platform
   ansible.builtin.assert:
     that:
-      - ansible_distribution == 'Debian'
-      - ansible_distribution_major_version | int == 13
+      - >-
+        (ansible_distribution == 'Debian' and (ansible_distribution_major_version | int) == 13)
+        or
+        (ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04')
       - ansible_architecture in ['x86_64', 'amd64', 'aarch64', 'arm64']
       - zabbix_server_db_password is defined
       - (zabbix_server_db_password | default('') | length) > 0
-    fail_msg: "Zabbix server currently targets Debian 13 and requires zabbix_server_db_password from a runtime secret source."
+    fail_msg: "Zabbix server supports Debian 13 or Ubuntu 24.04 LTS and requires zabbix_server_db_password from a runtime secret source."
 
 - name: Download official Zabbix repository package
   ansible.builtin.get_url:
-    url: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/{{ zabbix_repository_family }}/pool/main/z/zabbix-release/zabbix-release_latest_{{ zabbix_version }}+debian{{ ansible_distribution_major_version }}_all.deb"
-    dest: "/tmp/zabbix-release-{{ zabbix_version }}-debian{{ ansible_distribution_major_version }}.deb"
+    url: "{{ zabbix_repository_package_url }}"
+    dest: "{{ zabbix_repository_package_path }}"
     mode: "0644"
 
 - name: Install official Zabbix repository package
   ansible.builtin.apt:
-    deb: "/tmp/zabbix-release-{{ zabbix_version }}-debian{{ ansible_distribution_major_version }}.deb"
+    deb: "{{ zabbix_repository_package_path }}"
     state: present
 
 - name: Install Zabbix server packages
@@ -74,7 +76,7 @@
 
 - name: Restart PHP-FPM after Zabbix package or locale changes
   ansible.builtin.service:
-    name: php8.4-fpm
+    name: {{ zabbix_php_fpm_service }}
     state: restarted
   when: >-
     zabbix_server_package_install.changed or
@@ -200,7 +202,7 @@
     - "{{ zabbix_server_service_name }}"
     - "{{ zabbix_server_agent_service_name }}"
     - nginx
-    - php8.4-fpm
+    - {{ zabbix_php_fpm_service }}
 
 - name: Reload Nginx when Zabbix frontend configuration changes
   ansible.builtin.service:
