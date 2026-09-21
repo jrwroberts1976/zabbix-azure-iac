@@ -3,12 +3,13 @@ postgresql_version: 17
 postgresql_service_name: postgresql
 timescaledb_repository_key_url: https://packagecloud.io/timescale/timescaledb/gpgkey
 timescaledb_repository_key_path: /etc/apt/keyrings/timescale-timescaledb.asc
-timescaledb_repository_uri: https://packagecloud.io/timescale/timescaledb/debian
-# Preserved from the validated source deployment.
+timescaledb_repository_distribution: "{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}"
+timescaledb_repository_uri: "https://packagecloud.io/timescale/timescaledb/{{ timescaledb_repository_distribution }}"
+# Preserved from the validated source deployment and selected per supported OS.
 timescaledb_version: "2.29.2"
 timescaledb_package_name: "timescaledb-2-postgresql-{{ postgresql_version }}"
 timescaledb_loader_package_name: "timescaledb-2-loader-postgresql-{{ postgresql_version }}"
-timescaledb_package_version: "2.29.2~debian13-1711"
+timescaledb_package_version: "{{ timescaledb_version ~ '~ubuntu' ~ ansible_distribution_version ~ '-1711' if ansible_distribution == 'Ubuntu' else timescaledb_version ~ '~debian' ~ ansible_distribution_major_version ~ '-1711' }}"
 timescaledb_package: "{{ timescaledb_package_name }}={{ timescaledb_package_version }}"
 timescaledb_loader_package: "{{ timescaledb_loader_package_name }}={{ timescaledb_package_version }}"
 timescaledb_databases: []
