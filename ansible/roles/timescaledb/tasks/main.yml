@@ -2,10 +2,12 @@
 - name: Verify TimescaleDB role platform
   ansible.builtin.assert:
     that:
-      - ansible_distribution == 'Debian'
-      - ansible_distribution_major_version | int == 13
+      - >-
+        (ansible_distribution == 'Debian' and (ansible_distribution_major_version | int) == 13)
+        or
+        (ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04')
       - timescaledb_version is version('2.30.0', '<')
-    fail_msg: "The TimescaleDB role currently targets Debian 13 with the approved Zabbix-compatible version."
+    fail_msg: "The TimescaleDB role supports Debian 13 or Ubuntu 24.04 LTS with the approved Zabbix-compatible version."
 
 - name: Install TimescaleDB repository prerequisites
   ansible.builtin.apt:
