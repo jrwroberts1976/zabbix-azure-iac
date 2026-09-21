@@ -22,6 +22,7 @@ You will be prompted for:
 
 - Azure subscription;
 - Azure region;
+- operating system: **Debian 13** or **Ubuntu 24.04 LTS**;
 - resource group and VM names;
 - SSH administrator username and existing SSH key;
 - the public IP/CIDR allowed to administer the VM;
@@ -45,7 +46,7 @@ Terraform creates:
 - a network security group;
 - a static public IP (optional);
 - a network interface;
-- a Debian 13 Gen2 Azure VM.
+- an Azure Linux VM using either Debian 13 Gen2 or Ubuntu 24.04 LTS.
 
 Ansible configures:
 
@@ -98,11 +99,24 @@ terraform plan
 terraform apply
 ```
 
-The default VM image is the official Debian 13 Gen2 marketplace image:
+Choose the OS with `os_type`:
+
+```hcl
+# Default
+os_type = "debian-13"
+
+# Or
+os_type = "ubuntu-24.04"
+```
+
+The corresponding Azure Marketplace images are:
 
 ```text
-Debian:debian-13:13-gen2:latest
+Debian 13:       Debian:debian-13:13-gen2:latest
+Ubuntu 24.04:   Canonical:ubuntu-24_04-lts:server:latest
 ```
+
+The guided installer asks this question automatically; Debian 13 remains the default.
 
 ## 2. Generate the Ansible inventory
 
