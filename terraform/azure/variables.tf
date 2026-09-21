@@ -74,6 +74,17 @@ variable "subnet_address_prefixes" {
   default     = ["10.42.1.0/24"]
 }
 
+variable "os_type" {
+  description = "Operating system image for the Zabbix VM."
+  type        = string
+  default     = "debian-13"
+
+  validation {
+    condition     = contains(["debian-13", "ubuntu-24.04"], var.os_type)
+    error_message = "os_type must be either debian-13 or ubuntu-24.04."
+  }
+}
+
 variable "vm_size" {
   description = "Azure VM size."
   type        = string
