@@ -13,14 +13,16 @@
           Zabbix platform deployment is disabled by default.
           Set zabbix_platform_allow_deploy=true explicitly.
 
-    - name: Require supported Debian platform
+    - name: Require supported platform
       ansible.builtin.assert:
         that:
-          - ansible_distribution == 'Debian'
-          - ansible_distribution_major_version | int == 13
+          - >-
+            (ansible_distribution == 'Debian' and (ansible_distribution_major_version | int) == 13)
+            or
+            (ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04')
           - ansible_architecture in ['x86_64', 'amd64', 'aarch64', 'arm64']
         fail_msg: >-
-          This Zabbix platform build currently targets Debian 13.
+          This Zabbix platform build supports Debian 13 or Ubuntu 24.04 LTS.
 
     - name: Require runtime database secret
       ansible.builtin.assert:
