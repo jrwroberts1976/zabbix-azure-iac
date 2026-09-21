@@ -76,7 +76,7 @@
 
 - name: Restart PHP-FPM after Zabbix package or locale changes
   ansible.builtin.service:
-    name: {{ zabbix_php_fpm_service }}
+    name: "{{ zabbix_php_fpm_service }}"
     state: restarted
   when: >-
     zabbix_server_package_install.changed or
@@ -202,7 +202,7 @@
     - "{{ zabbix_server_service_name }}"
     - "{{ zabbix_server_agent_service_name }}"
     - nginx
-    - {{ zabbix_php_fpm_service }}
+    - "{{ zabbix_php_fpm_service }}"
 
 - name: Reload Nginx when Zabbix frontend configuration changes
   ansible.builtin.service:
