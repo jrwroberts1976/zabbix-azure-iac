@@ -1,0 +1,38 @@
+---
+# Safety gate. Deployment must be explicitly approved at runtime.
+zabbix_platform_allow_deploy: false
+
+# Runtime secret contract. No database password is stored in Git.
+zabbix_server_db_password: >-
+  {{
+    lookup(
+      'ansible.builtin.env',
+      'ZABBIX_DB_PASSWORD'
+    )
+  }}
+
+zabbix_server_db_name: zabbix
+zabbix_server_db_user: zabbix
+
+postgresql_users:
+  - name: zabbix
+    password: "{{ zabbix_server_db_password }}"
+    role_attr_flags: LOGIN
+
+postgresql_databases:
+  - name: zabbix
+    owner: zabbix
+    encoding: UTF8
+
+timescaledb_databases:
+  - zabbix
+
+zabbix_timescaledb_database: zabbix
+
+zabbix_server_nginx_listen: 8080
+zabbix_server_nginx_server_name: _
+
+# The Zabbix server monitors its own local Agent 2 over loopback.
+zabbix_server_address: 127.0.0.1
+zabbix_agent_server_passive: 127.0.0.1
+zabbix_agent_server_active: 127.0.0.1

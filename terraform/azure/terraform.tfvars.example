@@ -1,0 +1,33 @@
+subscription_id = "00000000-0000-0000-0000-000000000000"
+location        = "UK South"
+
+resource_group_name = "rg-zabbix-prod-uks"
+vm_name             = "zabbix-azure-01"
+admin_username       = "zabbixadmin"
+ssh_public_key_path  = "~/.ssh/id_ed25519.pub"
+
+# Replace with your trusted public IP/CIDR, VPN subnet, or management network.
+admin_source_cidrs = [
+  "198.51.100.10/32"
+]
+
+# Empty by default: use SSH port forwarding or add only trusted CIDRs.
+frontend_source_cidrs = []
+
+# Add private/VPN agent networks if using active checks across networks.
+zabbix_trapper_source_cidrs = []
+
+enable_public_ip = true
+
+vnet_address_space       = ["10.42.0.0/16"]
+subnet_address_prefixes  = ["10.42.1.0/24"]
+
+vm_size                      = "Standard_B2s"
+os_disk_size_gb              = 64
+os_disk_storage_account_type = "StandardSSD_LRS"
+
+tags = {
+  application = "zabbix"
+  managed_by  = "terraform"
+  environment = "production"
+}

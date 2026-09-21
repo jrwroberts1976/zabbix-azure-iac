@@ -1,0 +1,27 @@
+# Terraform
+**/.terraform/*
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+!**/*.tfvars.example
+crash.log
+crash.*.log
+
+# Runtime secrets
+**/*.env
+!**/*.env.example
+
+# Ansible generated inventory / retry files
+ansible/inventory/generated.yml
+*.retry
+
+# SSH private keys
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store

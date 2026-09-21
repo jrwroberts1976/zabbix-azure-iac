@@ -1,0 +1,41 @@
+name: Validate IaC
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.3"
+      - name: Terraform format
+        run: terraform fmt -check -recursive terraform/azure
+      - name: Terraform init
+        run: terraform -chdir=terraform/azure init -backend=false
+      - name: Terraform validate
+        run: terraform -chdir=terraform/azure validate
+
+  ansible:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install Ansible
+        run: pip install 'ansible-core>=2.17,<2.21'
+      - name: Install collections
+        run: ansible-galaxy collection install -r ansible/requirements.yml
+      - name: Syntax check platform playbook
+        working-directory: ansible
+        run: ansible-playbook -i inventory/azure.example.yml playbooks/zabbix-platform.yml --syntax-check
+      - name: Syntax check agent playbook
+        working-directory: ansible
+        run: ansible-playbook -i inventory/azure.example.yml playbooks/zabbix-agent.yml --syntax-check

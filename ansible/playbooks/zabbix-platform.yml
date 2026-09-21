@@ -1,0 +1,39 @@
+---
+- name: Configure the Zabbix monitoring platform
+  hosts: zabbix_servers
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Require explicit Zabbix deployment approval
+      ansible.builtin.assert:
+        that:
+          - zabbix_platform_allow_deploy | bool
+        fail_msg: >-
+          Zabbix platform deployment is disabled by default.
+          Set zabbix_platform_allow_deploy=true explicitly.
+
+    - name: Require supported Debian platform
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Debian'
+          - ansible_distribution_major_version | int == 13
+          - ansible_architecture in ['x86_64', 'amd64', 'aarch64', 'arm64']
+        fail_msg: >-
+          This Zabbix platform build currently targets Debian 13.
+
+    - name: Require runtime database secret
+      ansible.builtin.assert:
+        that:
+          - zabbix_server_db_password is defined
+          - zabbix_server_db_password | length >= 24
+        fail_msg: >-
+          ZABBIX_DB_PASSWORD must be supplied at runtime
+          and must contain at least 24 characters.
+
+  roles:
+    - role: postgresql
+    - role: timescaledb
+    - role: zabbix_server
+    - role: zabbix_timescaledb
+    - role: zabbix_agent

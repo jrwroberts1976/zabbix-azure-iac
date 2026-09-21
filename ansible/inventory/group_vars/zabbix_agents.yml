@@ -1,0 +1,11 @@
+---
+# Remote agents are pointed at the Zabbix server at runtime.
+# Example:
+#   export ZABBIX_SERVER_ADDRESS=10.42.1.4
+zabbix_server_address: >-
+  {{ lookup('ansible.builtin.env', 'ZABBIX_SERVER_ADDRESS') }}
+zabbix_agent_server_passive: "{{ zabbix_server_address }}"
+zabbix_agent_server_active: "{{ zabbix_server_address }}"
+
+# Host firewall mutation remains opt-in.
+zabbix_agent_manage_ufw: false
