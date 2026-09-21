@@ -80,6 +80,33 @@ echo "Current Azure subscription: $default_subscription_name ($default_subscript
 prompt SUBSCRIPTION_ID "Azure subscription ID" "$default_subscription_id"
 az account set --subscription "$SUBSCRIPTION_ID"
 
+say "Operating system"
+echo "Choose the operating system for the Zabbix VM:"
+echo "  1) Debian 13 (default)"
+echo "  2) Ubuntu 24.04 LTS"
+while true; do
+  read -r -p "OS choice [1]: " OS_CHOICE
+  OS_CHOICE="${OS_CHOICE:-1}"
+  case "$OS_CHOICE" in
+    1)
+      OS_TYPE="debian-13"
+      OS_DISPLAY="Debian 13"
+      PHP_FPM_SERVICE="php8.4-fpm"
+      break
+      ;;
+    2)
+      OS_TYPE="ubuntu-24.04"
+      OS_DISPLAY="Ubuntu 24.04 LTS"
+      PHP_FPM_SERVICE="php8.3-fpm"
+      break
+      ;;
+    *)
+      echo "Please choose 1 or 2."
+      ;;
+  esac
+done
+echo "Selected OS: $OS_DISPLAY"
+
 say "Azure VM settings"
 prompt LOCATION "Azure region" "UK South"
 prompt RESOURCE_GROUP "Resource group name" "rg-zabbix-prod-uks"
@@ -157,7 +184,8 @@ enable_public_ip = true
 vnet_address_space      = ["10.42.0.0/16"]
 subnet_address_prefixes = ["10.42.1.0/24"]
 
-vm_size                      = "$VM_SIZE"
+os_type                       = "$OS_TYPE"
+vm_size                       = "$VM_SIZE"
 os_disk_size_gb              = 64
 os_disk_storage_account_type = "StandardSSD_LRS"
 
@@ -233,7 +261,7 @@ ssh \
   -o StrictHostKeyChecking=accept-new \
   -i "$SSH_PRIVATE_KEY" \
   "$ADMIN_USERNAME@$TARGET_IP" \
-  "sudo systemctl is-active postgresql zabbix-server zabbix-agent2 nginx php8.4-fpm && curl -fsSI http://127.0.0.1:8080/ | head -1"
+  "sudo systemctl is-active postgresql zabbix-server zabbix-agent2 nginx $PHP_FPM_SERVICE && curl -fsSI http://127.0.0.1:8080/ | head -1"
 
 cat <<EOF_DONE
 
@@ -241,6 +269,7 @@ cat <<EOF_DONE
 Zabbix deployment completed.
 ============================================================
 VM:         $VM_NAME
+OS:         $OS_DISPLAY
 Public IP:  ${PUBLIC_IP:-not enabled}
 SSH user:   $ADMIN_USERNAME
 
