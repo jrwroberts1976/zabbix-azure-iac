@@ -1,7 +1,9 @@
 ---
 zabbix_timescaledb_database: zabbix
 zabbix_timescaledb_schema_script: /usr/share/zabbix-sql-scripts/postgresql/timescaledb/schema.sql
+zabbix_php_version: "{{ '8.3' if ansible_distribution == 'Ubuntu' else '8.4' }}"
+zabbix_php_fpm_service: "php{{ zabbix_php_version }}-fpm"
 zabbix_timescaledb_managed_services:
   - zabbix-server
   - nginx
-  - php8.4-fpm
+  - "{{ zabbix_php_fpm_service }}"
