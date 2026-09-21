@@ -1,4 +1,21 @@
 locals {
+  os_images = {
+    "debian-13" = {
+      publisher = "Debian"
+      offer     = "debian-13"
+      sku       = "13-gen2"
+      version   = "latest"
+    }
+    "ubuntu-24.04" = {
+      publisher = "Canonical"
+      offer     = "ubuntu-24_04-lts"
+      sku       = "server"
+      version   = "latest"
+    }
+  }
+
+  selected_os_image = local.os_images[var.os_type]
+
   ssh_rules = {
     for idx, cidr in var.admin_source_cidrs : tostring(idx) => {
       cidr     = cidr
@@ -151,10 +168,10 @@ resource "azurerm_linux_virtual_machine" "zabbix" {
   }
 
   source_image_reference {
-    publisher = "Debian"
-    offer     = "debian-13"
-    sku       = "13-gen2"
-    version   = "latest"
+    publisher = local.selected_os_image.publisher
+    offer     = local.selected_os_image.offer
+    sku       = local.selected_os_image.sku
+    version   = local.selected_os_image.version
   }
 
   boot_diagnostics {}
