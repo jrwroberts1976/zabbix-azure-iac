@@ -4,6 +4,38 @@ Standalone Infrastructure as Code for deploying a Zabbix 7.0 monitoring server o
 
 This repository was extracted from a working Zabbix IaC implementation and made cloud-portable. The reusable Ansible application layer is retained, while the original Proxmox/LXC provisioning and homelab-specific inventory are deliberately excluded.
 
+
+## Easiest install: guided script
+
+If you are new to Azure, Terraform or Ansible, use the interactive installer instead of editing Terraform files by hand.
+
+The script asks you for the important settings, shows sensible defaults, signs you in to Azure if needed, creates a Terraform plan, asks again before creating any chargeable resources, generates the Ansible inventory and installs Zabbix. The database password is entered with hidden input and is kept only in the script process; it is not written to Git or to `terraform.tfvars`.
+
+From the repository root:
+
+```bash
+chmod +x scripts/install-zabbix-azure.sh
+./scripts/install-zabbix-azure.sh
+```
+
+You will be prompted for:
+
+- Azure subscription;
+- Azure region;
+- resource group and VM names;
+- SSH administrator username and existing SSH key;
+- the public IP/CIDR allowed to administer the VM;
+- whether to expose the Zabbix web interface directly (the safer default is **No**, using an SSH tunnel);
+- an optional network allowed to use Zabbix active checks on TCP/10051;
+- Azure VM size;
+- a Zabbix database password of at least 24 characters.
+
+The script checks that `az`, `terraform`, `ansible-playbook`, `ansible-galaxy` and `ssh` are installed before it starts. It will **not** run `terraform apply` until you have reviewed the Terraform plan and explicitly answered yes.
+
+After a successful deployment it checks PostgreSQL, Zabbix Server, Zabbix Agent 2, Nginx and PHP-FPM and prints the command needed to access the frontend.
+
+> Azure resources can incur charges. Keep the generated Terraform state and `terraform.tfvars` files safe because they are required to manage or destroy the deployment later. Both are ignored by Git.
+
 ## What it deploys
 
 Terraform creates:
