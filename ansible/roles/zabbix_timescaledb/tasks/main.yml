@@ -84,6 +84,7 @@
         name: "{{ item }}"
         state: stopped
       loop: "{{ zabbix_timescaledb_managed_services }}"
+      delegate_to: "{{ zabbix_timescaledb_service_host | default(inventory_hostname, true) }}"
 
     - name: Run packaged Zabbix TimescaleDB schema
       ansible.builtin.command:
@@ -108,6 +109,7 @@
         state: started
         enabled: true
       loop: "{{ zabbix_timescaledb_managed_services }}"
+      delegate_to: "{{ zabbix_timescaledb_service_host | default(inventory_hostname, true) }}"
 
 - name: Recheck vendor-declared TimescaleDB hypertables
   ansible.builtin.shell:

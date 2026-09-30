@@ -16,10 +16,16 @@ variable "resource_group_name" {
   default     = "rg-zabbix-prod-uks"
 }
 
-variable "vm_name" {
-  description = "Azure VM/computer name."
+variable "frontend_vm_name" {
+  description = "Azure VM/computer name for the Zabbix server and web frontend."
   type        = string
-  default     = "zabbix-azure-01"
+  default     = "zabbix-frontend-01"
+}
+
+variable "database_vm_name" {
+  description = "Azure VM/computer name for PostgreSQL and TimescaleDB."
+  type        = string
+  default     = "zabbix-db-01"
 }
 
 variable "admin_username" {
@@ -35,7 +41,7 @@ variable "ssh_public_key_path" {
 }
 
 variable "admin_source_cidrs" {
-  description = "CIDRs allowed to SSH to the VM. Keep this tightly scoped."
+  description = "CIDRs allowed to SSH to the frontend VM. Keep this tightly scoped."
   type        = list(string)
 
   validation {
@@ -57,7 +63,7 @@ variable "zabbix_trapper_source_cidrs" {
 }
 
 variable "enable_public_ip" {
-  description = "Create and attach a static public IP. Disable when deploying through private connectivity/Bastion."
+  description = "Create and attach a static public IP to the frontend VM. The database VM remains private-only."
   type        = bool
   default     = true
 }
@@ -75,7 +81,7 @@ variable "subnet_address_prefixes" {
 }
 
 variable "os_type" {
-  description = "Operating system image for the Zabbix VM."
+  description = "Operating system image used by both Zabbix VMs."
   type        = string
   default     = "debian-13"
 
@@ -85,16 +91,28 @@ variable "os_type" {
   }
 }
 
-variable "vm_size" {
-  description = "Azure VM size."
+variable "frontend_vm_size" {
+  description = "Azure VM size for the Zabbix server/frontend VM."
   type        = string
   default     = "Standard_B2s"
 }
 
-variable "os_disk_size_gb" {
-  description = "OS disk size in GiB."
+variable "database_vm_size" {
+  description = "Azure VM size for the PostgreSQL/TimescaleDB VM."
+  type        = string
+  default     = "Standard_B2s"
+}
+
+variable "frontend_os_disk_size_gb" {
+  description = "Frontend VM OS disk size in GiB."
   type        = number
   default     = 64
+}
+
+variable "database_os_disk_size_gb" {
+  description = "Database VM OS disk size in GiB."
+  type        = number
+  default     = 128
 }
 
 variable "os_disk_storage_account_type" {

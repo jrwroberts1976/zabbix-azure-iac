@@ -56,7 +56,7 @@ detect_public_ip() {
 }
 
 say "Zabbix on Azure - guided installer"
-echo "This script will create Azure resources with Terraform and configure the VM with Ansible."
+echo "This script will create two Azure VMs with Terraform and configure them with Ansible."
 echo "Azure resources can incur charges. You will see a Terraform plan before anything is created."
 
 require_command az "Install Azure CLI: https://learn.microsoft.com/cli/azure/install-azure-cli"
@@ -81,7 +81,7 @@ prompt SUBSCRIPTION_ID "Azure subscription ID" "$default_subscription_id"
 az account set --subscription "$SUBSCRIPTION_ID"
 
 say "Operating system"
-echo "Choose the operating system for the Zabbix VM:"
+echo "Choose the operating system for both Zabbix VMs:"
 echo "  1) Debian 13 (default)"
 echo "  2) Ubuntu 24.04 LTS"
 while true; do
@@ -110,9 +110,11 @@ echo "Selected OS: $OS_DISPLAY"
 say "Azure VM settings"
 prompt LOCATION "Azure region" "UK South"
 prompt RESOURCE_GROUP "Resource group name" "rg-zabbix-prod-uks"
-prompt VM_NAME "VM name" "zabbix-azure-01"
+prompt FRONTEND_VM_NAME "Frontend/server VM name" "zabbix-frontend-01"
+prompt DATABASE_VM_NAME "Database VM name" "zabbix-db-01"
 prompt ADMIN_USERNAME "SSH admin username" "zabbixadmin"
-prompt VM_SIZE "Azure VM size" "Standard_B2s"
+prompt FRONTEND_VM_SIZE "Frontend/server Azure VM size" "Standard_B2s"
+prompt DATABASE_VM_SIZE "Database Azure VM size" "Standard_B2s"
 
 prompt SSH_PUBLIC_KEY "SSH public key path" "$HOME/.ssh/id_ed25519.pub"
 SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY/#\~/$HOME}"
@@ -132,7 +134,7 @@ if [[ -n "$detected_cidr" ]]; then
   echo "Detected your current public IP as: $detected_cidr"
 fi
 while true; do
-  prompt ADMIN_CIDR "IP/CIDR allowed to SSH to the VM" "${detected_cidr:-198.51.100.10/32}"
+  prompt ADMIN_CIDR "IP/CIDR allowed to SSH to the frontend VM" "${detected_cidr:-198.51.100.10/32}"
   valid_cidr_or_ip "$ADMIN_CIDR" && break
   echo "Please enter an IPv4 address or CIDR, for example 203.0.113.25/32."
 done
@@ -172,9 +174,10 @@ subscription_id = "$SUBSCRIPTION_ID"
 location        = "$LOCATION"
 
 resource_group_name = "$RESOURCE_GROUP"
-vm_name             = "$VM_NAME"
-admin_username       = "$ADMIN_USERNAME"
-ssh_public_key_path  = "$SSH_PUBLIC_KEY"
+frontend_vm_name    = "$FRONTEND_VM_NAME"
+database_vm_name    = "$DATABASE_VM_NAME"
+admin_username      = "$ADMIN_USERNAME"
+ssh_public_key_path = "$SSH_PUBLIC_KEY"
 
 admin_source_cidrs = ["$ADMIN_CIDR"]
 frontend_source_cidrs = $FRONTEND_CIDRS
@@ -184,9 +187,13 @@ enable_public_ip = true
 vnet_address_space      = ["10.42.0.0/16"]
 subnet_address_prefixes = ["10.42.1.0/24"]
 
-os_type                       = "$OS_TYPE"
-vm_size                       = "$VM_SIZE"
-os_disk_size_gb              = 64
+os_type = "$OS_TYPE"
+
+frontend_vm_size = "$FRONTEND_VM_SIZE"
+database_vm_size = "$DATABASE_VM_SIZE"
+
+frontend_os_disk_size_gb = 64
+database_os_disk_size_gb = 128
 os_disk_storage_account_type = "StandardSSD_LRS"
 
 tags = {
@@ -222,13 +229,15 @@ SSH_PRIVATE_KEY="$SSH_PRIVATE_KEY" "$ROOT/scripts/render-inventory.sh"
 say "Installing Ansible collection"
 ansible-galaxy collection install -r "$ANSIBLE_DIR/requirements.yml"
 
-PUBLIC_IP="$(terraform -chdir="$TF_DIR" output -raw zabbix_public_ip)"
+PUBLIC_IP="$(terraform -chdir="$TF_DIR" output -raw zabbix_frontend_public_ip)"
+FRONTEND_PRIVATE_IP="$(terraform -chdir="$TF_DIR" output -raw zabbix_frontend_private_ip)"
+DATABASE_PRIVATE_IP="$(terraform -chdir="$TF_DIR" output -raw zabbix_database_private_ip)"
 TARGET_IP="$PUBLIC_IP"
 if [[ -z "$TARGET_IP" ]]; then
-  TARGET_IP="$(terraform -chdir="$TF_DIR" output -raw zabbix_private_ip)"
+  TARGET_IP="$FRONTEND_PRIVATE_IP"
 fi
 
-say "Waiting for SSH on $TARGET_IP"
+say "Waiting for SSH on frontend $TARGET_IP"
 for attempt in $(seq 1 30); do
   if ssh \
     -o BatchMode=yes \
@@ -243,6 +252,25 @@ for attempt in $(seq 1 30); do
     die "SSH did not become ready. Check the Azure NSG, your current public IP, and the VM boot diagnostics."
   fi
   printf 'Waiting for SSH... attempt %s/30\n' "$attempt"
+  sleep 10
+done
+
+say "Waiting for SSH on database $DATABASE_PRIVATE_IP through frontend"
+for attempt in $(seq 1 30); do
+  if ssh \
+    -o BatchMode=yes \
+    -o ConnectTimeout=5 \
+    -o StrictHostKeyChecking=accept-new \
+    -i "$SSH_PRIVATE_KEY" \
+    -J "$ADMIN_USERNAME@$TARGET_IP" \
+    "$ADMIN_USERNAME@$DATABASE_PRIVATE_IP" true >/dev/null 2>&1; then
+    echo "Database SSH is ready."
+    break
+  fi
+  if [[ "$attempt" -eq 30 ]]; then
+    die "Database SSH did not become ready through the frontend jump host."
+  fi
+  printf 'Waiting for database SSH... attempt %s/30\n' "$attempt"
   sleep 10
 done
 
@@ -261,16 +289,26 @@ ssh \
   -o StrictHostKeyChecking=accept-new \
   -i "$SSH_PRIVATE_KEY" \
   "$ADMIN_USERNAME@$TARGET_IP" \
-  "sudo systemctl is-active postgresql zabbix-server zabbix-agent2 nginx $PHP_FPM_SERVICE && curl -fsSI http://127.0.0.1:8080/ | head -1"
+  "sudo systemctl is-active zabbix-server zabbix-agent2 nginx $PHP_FPM_SERVICE && curl -fsSI http://127.0.0.1:8080/ | head -1"
+
+ssh \
+  -o BatchMode=yes \
+  -o StrictHostKeyChecking=accept-new \
+  -i "$SSH_PRIVATE_KEY" \
+  -J "$ADMIN_USERNAME@$TARGET_IP" \
+  "$ADMIN_USERNAME@$DATABASE_PRIVATE_IP" \
+  "sudo systemctl is-active postgresql zabbix-agent2"
 
 cat <<EOF_DONE
 
 ============================================================
 Zabbix deployment completed.
 ============================================================
-VM:         $VM_NAME
+Frontend:   $FRONTEND_VM_NAME
+Database:   $DATABASE_VM_NAME
 OS:         $OS_DISPLAY
 Public IP:  ${PUBLIC_IP:-not enabled}
+DB private: $DATABASE_PRIVATE_IP
 SSH user:   $ADMIN_USERNAME
 
 EOF_DONE
@@ -279,7 +317,7 @@ if [[ "$EXPOSE_FRONTEND" == "yes" ]]; then
   echo "Open the Zabbix frontend from your trusted network:"
   echo "  http://$TARGET_IP:8080"
 else
-  echo "The frontend was kept private. Start this SSH tunnel:"
+  echo "Direct TCP/8080 access was kept closed. Start this SSH tunnel:"
   echo
   echo "  ssh -i '$SSH_PRIVATE_KEY' -L 8080:127.0.0.1:8080 '$ADMIN_USERNAME@$TARGET_IP'"
   echo
@@ -287,5 +325,6 @@ else
 fi
 
 echo
+echo "The database VM is private-only; administration is routed through the frontend VM as a jump host."
 echo "Terraform state and terraform.tfvars remain local and are ignored by Git."
 echo "Keep them safe; they are needed to manage or destroy this Azure deployment later."

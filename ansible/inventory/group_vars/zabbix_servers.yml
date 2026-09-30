@@ -11,28 +11,15 @@ zabbix_server_db_password: >-
     )
   }}
 
+zabbix_server_db_host: "{{ hostvars[groups['zabbix_databases'][0]].zabbix_private_ip }}"
+zabbix_server_db_port: 5432
 zabbix_server_db_name: zabbix
 zabbix_server_db_user: zabbix
-
-postgresql_users:
-  - name: zabbix
-    password: "{{ zabbix_server_db_password }}"
-    role_attr_flags: LOGIN
-
-postgresql_databases:
-  - name: zabbix
-    owner: zabbix
-    encoding: UTF8
-
-timescaledb_databases:
-  - zabbix
-
-zabbix_timescaledb_database: zabbix
 
 zabbix_server_nginx_listen: 8080
 zabbix_server_nginx_server_name: _
 
-# The Zabbix server monitors its own local Agent 2 over loopback.
+# The frontend/server VM monitors its own Agent 2 over loopback.
 zabbix_server_address: 127.0.0.1
 zabbix_agent_server_passive: 127.0.0.1
 zabbix_agent_server_active: 127.0.0.1
