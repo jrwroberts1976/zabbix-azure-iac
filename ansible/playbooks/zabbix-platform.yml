@@ -1,6 +1,6 @@
 ---
-- name: Configure the Zabbix monitoring platform
-  hosts: zabbix_servers
+- name: Configure PostgreSQL and TimescaleDB on the database VM
+  hosts: zabbix_databases
   become: true
   gather_facts: true
 
@@ -13,7 +13,7 @@
           Zabbix platform deployment is disabled by default.
           Set zabbix_platform_allow_deploy=true explicitly.
 
-    - name: Require supported platform
+    - name: Require supported database platform
       ansible.builtin.assert:
         that:
           - >-
@@ -22,7 +22,7 @@
             (ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04')
           - ansible_architecture in ['x86_64', 'amd64', 'aarch64', 'arm64']
         fail_msg: >-
-          This Zabbix platform build supports Debian 13 or Ubuntu 24.04 LTS.
+          The Zabbix database build supports Debian 13 or Ubuntu 24.04 LTS.
 
     - name: Require runtime database secret
       ansible.builtin.assert:
@@ -36,6 +36,57 @@
   roles:
     - role: postgresql
     - role: timescaledb
-    - role: zabbix_server
-    - role: zabbix_timescaledb
     - role: zabbix_agent
+
+- name: Configure Zabbix server and web frontend
+  hosts: zabbix_servers
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Require explicit Zabbix deployment approval
+      ansible.builtin.assert:
+        that:
+          - zabbix_platform_allow_deploy | bool
+        fail_msg: >-
+          Zabbix platform deployment is disabled by default.
+          Set zabbix_platform_allow_deploy=true explicitly.
+
+    - name: Require supported frontend platform
+      ansible.builtin.assert:
+        that:
+          - >-
+            (ansible_distribution == 'Debian' and (ansible_distribution_major_version | int) == 13)
+            or
+            (ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04')
+          - ansible_architecture in ['x86_64', 'amd64', 'aarch64', 'arm64']
+        fail_msg: >-
+          The Zabbix frontend build supports Debian 13 or Ubuntu 24.04 LTS.
+
+    - name: Require runtime database secret
+      ansible.builtin.assert:
+        that:
+          - zabbix_server_db_password is defined
+          - zabbix_server_db_password | length >= 24
+        fail_msg: >-
+          ZABBIX_DB_PASSWORD must be supplied at runtime
+          and must contain at least 24 characters.
+
+  roles:
+    - role: zabbix_server
+    - role: zabbix_agent
+
+- name: Convert the Zabbix database to TimescaleDB
+  hosts: zabbix_databases
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Install Zabbix SQL scripts on database VM
+      ansible.builtin.apt:
+        name: zabbix-sql-scripts
+        state: present
+        update_cache: true
+
+  roles:
+    - role: zabbix_timescaledb
