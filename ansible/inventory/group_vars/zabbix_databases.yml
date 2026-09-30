@@ -1,0 +1,38 @@
+---
+# Safety gate. Deployment must be explicitly approved at runtime.
+zabbix_platform_allow_deploy: false
+
+zabbix_server_db_password: >-
+  {{
+    lookup(
+      'ansible.builtin.env',
+      'ZABBIX_DB_PASSWORD'
+    )
+  }}
+
+postgresql_listen_addresses: "0.0.0.0"
+postgresql_port: 5432
+
+postgresql_users:
+  - name: zabbix
+    password: "{{ zabbix_server_db_password }}"
+    role_attr_flags: LOGIN
+
+postgresql_databases:
+  - name: zabbix
+    owner: zabbix
+    encoding: UTF8
+
+postgresql_hba_rules:
+  - "host zabbix zabbix {{ hostvars[groups['zabbix_servers'][0]].zabbix_private_ip }}/32 scram-sha-256"
+
+timescaledb_databases:
+  - zabbix
+
+zabbix_timescaledb_database: zabbix
+zabbix_timescaledb_service_host: "{{ groups['zabbix_servers'][0] }}"
+
+# Monitor the DB VM with Agent 2 using the frontend VM's private address.
+zabbix_server_address: "{{ hostvars[groups['zabbix_servers'][0]].zabbix_private_ip }}"
+zabbix_agent_server_passive: "{{ zabbix_server_address }}"
+zabbix_agent_server_active: "{{ zabbix_server_address }}"
