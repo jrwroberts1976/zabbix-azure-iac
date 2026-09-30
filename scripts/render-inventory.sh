@@ -11,14 +11,16 @@ command -v terraform >/dev/null 2>&1 || {
   exit 1
 }
 
-public_ip="$(terraform -chdir="$TF_DIR" output -raw zabbix_public_ip 2>/dev/null || true)"
-private_ip="$(terraform -chdir="$TF_DIR" output -raw zabbix_private_ip)"
+frontend_public_ip="$(terraform -chdir="$TF_DIR" output -raw zabbix_frontend_public_ip 2>/dev/null || true)"
+frontend_private_ip="$(terraform -chdir="$TF_DIR" output -raw zabbix_frontend_private_ip)"
+database_private_ip="$(terraform -chdir="$TF_DIR" output -raw zabbix_database_private_ip)"
 admin_user="$(terraform -chdir="$TF_DIR" output -raw zabbix_admin_username)"
-vm_name="$(terraform -chdir="$TF_DIR" output -raw zabbix_vm_name)"
+frontend_vm_name="$(terraform -chdir="$TF_DIR" output -raw zabbix_frontend_vm_name)"
+database_vm_name="$(terraform -chdir="$TF_DIR" output -raw zabbix_database_vm_name)"
 
-target="$public_ip"
-if [[ -z "$target" ]]; then
-  target="$private_ip"
+frontend_target="$frontend_public_ip"
+if [[ -z "$frontend_target" ]]; then
+  frontend_target="$frontend_private_ip"
 fi
 
 mkdir -p "$(dirname "$OUT")"
@@ -28,12 +30,23 @@ all:
   children:
     zabbix_servers:
       hosts:
-        ${vm_name}:
-          ansible_host: ${target}
+        ${frontend_vm_name}:
+          ansible_host: ${frontend_target}
           ansible_user: ${admin_user}
           ansible_ssh_private_key_file: ${SSH_PRIVATE_KEY}
+          zabbix_private_ip: ${frontend_private_ip}
+
+    zabbix_databases:
+      hosts:
+        ${database_vm_name}:
+          ansible_host: ${database_private_ip}
+          ansible_user: ${admin_user}
+          ansible_ssh_private_key_file: ${SSH_PRIVATE_KEY}
+          ansible_ssh_common_args: "-o ProxyJump=${admin_user}@${frontend_target}"
+          zabbix_private_ip: ${database_private_ip}
 YAML
 
 chmod 600 "$OUT"
 printf 'Wrote %s\n' "$OUT"
-printf 'Target: %s (%s)\n' "$vm_name" "$target"
+printf 'Frontend: %s (%s)\n' "$frontend_vm_name" "$frontend_target"
+printf 'Database: %s (%s via frontend jump host)\n' "$database_vm_name" "$database_private_ip"
