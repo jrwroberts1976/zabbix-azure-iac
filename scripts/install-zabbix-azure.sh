@@ -81,7 +81,7 @@ prompt SUBSCRIPTION_ID "Azure subscription ID" "$default_subscription_id"
 az account set --subscription "$SUBSCRIPTION_ID"
 
 say "Operating system"
-echo "Choose the operating system for the Zabbix VM:"
+echo "Choose the operating system for both Zabbix VMs:"
 echo "  1) Debian 13 (default)"
 echo "  2) Ubuntu 24.04 LTS"
 while true; do
@@ -317,7 +317,7 @@ if [[ "$EXPOSE_FRONTEND" == "yes" ]]; then
   echo "Open the Zabbix frontend from your trusted network:"
   echo "  http://$TARGET_IP:8080"
 else
-  echo "The frontend was kept private. Start this SSH tunnel:"
+  echo "Direct TCP/8080 access was kept closed. Start this SSH tunnel:"
   echo
   echo "  ssh -i '$SSH_PRIVATE_KEY' -L 8080:127.0.0.1:8080 '$ADMIN_USERNAME@$TARGET_IP'"
   echo
