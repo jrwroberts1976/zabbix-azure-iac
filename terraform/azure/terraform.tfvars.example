@@ -2,11 +2,13 @@ subscription_id = "00000000-0000-0000-0000-000000000000"
 location        = "UK South"
 
 resource_group_name = "rg-zabbix-prod-uks"
-vm_name             = "zabbix-azure-01"
-admin_username       = "zabbixadmin"
-ssh_public_key_path  = "~/.ssh/id_ed25519.pub"
+frontend_vm_name    = "zabbix-frontend-01"
+database_vm_name    = "zabbix-db-01"
+admin_username      = "zabbixadmin"
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
 
 # Replace with your trusted public IP/CIDR, VPN subnet, or management network.
+# This reaches the frontend VM only; the database VM is private-only.
 admin_source_cidrs = [
   "198.51.100.10/32"
 ]
@@ -19,13 +21,19 @@ zabbix_trapper_source_cidrs = []
 
 enable_public_ip = true
 
-vnet_address_space       = ["10.42.0.0/16"]
-subnet_address_prefixes  = ["10.42.1.0/24"]
+vnet_address_space      = ["10.42.0.0/16"]
+subnet_address_prefixes = ["10.42.1.0/24"]
 
 # Supported values: "debian-13" or "ubuntu-24.04"
-os_type                       = "debian-13"
-vm_size                       = "Standard_B2s"
-os_disk_size_gb              = 64
+# The same OS is used on both VMs.
+os_type = "debian-13"
+
+frontend_vm_size = "Standard_B2s"
+database_vm_size = "Standard_B2s"
+
+frontend_os_disk_size_gb = 64
+database_os_disk_size_gb = 128
+
 os_disk_storage_account_type = "StandardSSD_LRS"
 
 tags = {
