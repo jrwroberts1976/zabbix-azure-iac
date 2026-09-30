@@ -12,7 +12,7 @@ zabbix_server_packages:
   - zabbix-nginx-conf
   - zabbix-sql-scripts
   - zabbix-agent2
-  - "postgresql-client-{{ postgresql_version | default(17) }}"
+  - postgresql-client
   - "php{{ zabbix_php_version }}-pgsql"
   - locales
 zabbix_server_db_host: localhost
